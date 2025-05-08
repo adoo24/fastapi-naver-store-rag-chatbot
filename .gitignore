@@ -1,0 +1,43 @@
+# Python 관련
+*.pyc
+*.pyo
+__pycache__/
+*.pyd
+*.pdb
+*.egg-info/
+*.eggs/
+
+# 환경 설정 파일
+.env
+*.env
+
+# 가상 환경
+venv/
+env/
+.virtualenv/
+naver-store-chatbot/
+
+# IDE 관련
+.vscode/
+.idea/
+
+# 운영 체제 관련
+.DS_Store
+Thumbs.db
+
+# 로그 파일
+*.log
+
+# Milvus 관련 데이터
+fastapi-rag-milvus/data/
+fastapi-rag-milvus/volumes/
+
+# Docker 관련
+fastapi-rag-milvus/docker-compose.override.yml
+fastapi-rag-milvus/.env
+
+
+# 기타
+*.bak
+*.swp
+*.tmp
