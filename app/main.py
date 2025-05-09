@@ -12,7 +12,7 @@ logger = logging.getLogger("uvicorn")
 @app.on_event("startup")
 async def startup_event():
     collection = init_milvus()
-    if True:  # Milvus 컬렉션이 비어 있는지 확인
+    if False:  # Milvus 컬렉션이 비어 있는지 확인
         file_path = "final_result.pkl"  # .pkl 파일 경로
         if os.path.exists(file_path):
             load_and_store_pkl(file_path)
@@ -20,12 +20,12 @@ async def startup_event():
             print(f"❌ {file_path} 파일이 존재하지 않습니다. 데이터를 로드할 수 없습니다.")
     else:
         print("✅ Milvus 컬렉션이 이미 초기화되어 있습니다. 데이터를 로드하지 않습니다.")
-        
+
 
 # SSE 스트리밍 생성기
 async def sse_stream(question: str):
     try:
-        response = await answer_question(question)
+        response = await answer_question("default", question)
         yield f"data: 질문: {question}\n\n"
         yield f"data: 응답: {response['answer']}\n\n"
         for related_question in response["related_questions"]:
