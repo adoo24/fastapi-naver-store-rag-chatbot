@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from contextlib import asynccontextmanager
 from fastapi.responses import StreamingResponse
 from app.chat import answer_question, stream_answer_question
+from app.services.faq_services import FAQService
 from app.embeddings import init_milvus, load_and_store_pkl
 import os
 import logging
@@ -31,11 +32,12 @@ async def lifespan(app: FastAPI):
     print("🛑 Lifespan 종료: 리소스 정리 완료")
 
 app = FastAPI(lifespan=lifespan)
-
+# FAQService 인스턴스 생성
+faq_service = FAQService()
 
 @app.get("/chat", response_class=StreamingResponse)
-async def chat(question: str):
+async def chat(question: str, session_id: str = ""):
     if not question:
         raise HTTPException(status_code=400, detail="질문을 입력해주세요.")
 
-    return StreamingResponse(stream_answer_question("default", question), media_type="text/event-stream")
+    return StreamingResponse(faq_service.answer_question(question, session_id), media_type="text/event-stream")
