@@ -30,7 +30,10 @@ class FAQService:
         related_questions = self.milvus_repo.find_similar_faqs(embedding)
         faq_context = "\n\n".join([f"- {q['question']}" for q in related_questions])
         
-        yield f"data: 유사 질문 목록:\n{faq_context}\n\n"
+        if len(related_questions) <= 5:
+            # 유사 질문이 부족함, 보강 필요한 질문 저장
+            self.context_repo.log_insuffiecient_context_question(refined_question, embedding)
+        yield f"data: --- \n유사 질문 목록:\n{faq_context}\n\n --- \n\n"
 
         # 3. 중요도 기반 맥락 생성
         
@@ -40,12 +43,16 @@ class FAQService:
             yield message
             # 스트리밍 데이터를 합쳐서 저장
             if message.startswith("data: "):
+                print(f"수신된 메시지: {message[6:]}")  # 디버깅용 출력
                 full_answer += message[6:]
 
         # 5. 세션 데이터 업데이트
-        self.context_repo.save_user_message(session_id, question, full_answer.strip())
+        self.context_repo.save_user_message(session_id, refined_question, full_answer.strip())
+        # 6. 키워드 추출 및 저장
+        extracted_keyword = await self.openai_repo.extract_keyword(refined_question)
+        self.context_repo.save_keywords(extracted_keyword)
 
-    def load_and_store_pkl(self, file_path: str = "final_result.pkl"):
+    async def load_and_store_pkl(self, file_path: str = "final_result.pkl"):
         import os, pickle
         from app.utils.text_cleaning import clean_text
         """
@@ -61,6 +68,7 @@ class FAQService:
 
         # Milvus 초기화
         self.milvus_repo.initialize()
+        # self.milvus_repo.delete_all()
 
         # 데이터 삽입
         for question, answer in data.items():
@@ -74,7 +82,7 @@ class FAQService:
                 continue
 
             # 질문을 임베딩으로 변환
-            embedding = self.openai_repo.generate_embedding(cleaned_question)
+            embedding = await self.openai_repo.generate_embedding(cleaned_question)
 
             # Milvus에 데이터 삽입
             self.milvus_repo.insert_faq(cleaned_question, cleaned_answer, embedding)
