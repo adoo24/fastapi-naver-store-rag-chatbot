@@ -4,6 +4,9 @@ from app.repositories.context_repository import ContextRepository
 
 class FAQService:
     def __init__(self):
+        """
+        FAQService 초기화 시 Milvus 컬렉션을 초기화합니다.
+        """
         self.milvus_repo = MilvusRepository()
         self.openai_repo = OpenAIRepository()
         self.context_repo = ContextRepository()  # 사용자 세션 컨텍스트 관리
@@ -87,3 +90,9 @@ class FAQService:
             # Milvus에 데이터 삽입
             self.milvus_repo.insert_faq(cleaned_question, cleaned_answer, embedding)
             print(f"✅ 질문과 응답 저장 완료: {cleaned_question} -> {cleaned_answer}")
+    def is_initialized(self):
+        """
+        Milvus 컬렉션이 초기화되었는지 확인합니다.
+        :return: 초기화 여부 (True/False)
+        """
+        return not self.milvus_repo.collection.is_empty
