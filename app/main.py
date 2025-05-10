@@ -25,4 +25,5 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 # 라우터 등록
-app.include_router(chat_router, tags=["Chat"])
+app.include_router(chat_router, prefix="/chat", tags=["Chat"])
+
