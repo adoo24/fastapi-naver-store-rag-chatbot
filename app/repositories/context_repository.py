@@ -1,22 +1,22 @@
 from typing import Dict, List
+import redis
+import json
 
 class ContextRepository:
     # 슬라이딩 윈도우 크기 설정
     WINDOW_SIZE = 3
 
-    def __init__(self):
-        # 세션 데이터를 메모리에 저장 (필요시 Redis 등으로 대체 가능)
-        self.session_data: Dict[str, List[Dict[str, str]]] = {}
+    def __init__(self, redis_host="localhost", redis_port=6379, db=0):
+        # Redis 클라이언트 초기화
+        self.client = redis.StrictRedis(host=redis_host, port=redis_port, db=db, decode_responses=True)
 
     def create_session(self) -> str:
         """
         새로운 세션 ID를 생성합니다.
         :return: 생성된 세션 ID
         """
-        import uuid
-        session_id = str(uuid.uuid4())
-        self.session_data[session_id] = []
-        return session_id
+        session_id = self.client.incr("session_id_counter")
+        return f"session_{session_id}"
 
     def get_context(self, session_id: str) -> str:
         """
@@ -24,12 +24,9 @@ class ContextRepository:
         :param session_id: 사용자 세션 ID
         :return: 이전 대화 맥락 (문자열)
         """
-        if session_id not in self.session_data:
-            return ""
-        return "\n".join([
-            f"User: {msg['question']}\nBot: {msg['response']}"
-            for msg in self.session_data[session_id]
-        ])
+        context_key = f"context:{session_id}"
+        messages = self.client.lrange(context_key, 0, -1)
+        return "\n".join([json.loads(msg)["question"] for msg in messages])
 
     def save_user_message(self, session_id: str, question: str, response: str):
         """
@@ -38,13 +35,13 @@ class ContextRepository:
         :param question: 사용자가 입력한 질문
         :param response: 봇의 응답
         """
-        if session_id not in self.session_data:
-            self.session_data[session_id] = []
-        self.session_data[session_id].append({"question": question, "response": response})
+        context_key = f"context:{session_id}"
+        message = {"question": question, "response": response}
+        self.client.rpush(context_key, json.dumps(message))
 
         # 슬라이딩 윈도우 방식으로 최대 WINDOW_SIZE개의 대화만 유지
-        if len(self.session_data[session_id]) > self.WINDOW_SIZE:
-            self.session_data[session_id] = self.session_data[session_id][-self.WINDOW_SIZE:]
+        if self.client.llen(context_key) > self.WINDOW_SIZE:
+            self.client.ltrim(context_key, -self.WINDOW_SIZE, -1)
 
     def get_important_context(self, session_id: str) -> str:
         """
@@ -52,10 +49,26 @@ class ContextRepository:
         :param session_id: 사용자 세션 ID
         :return: 최근 대화 맥락 (문자열)
         """
-        if session_id not in self.session_data:
-            return ""
-        important_messages = self.session_data[session_id][-self.WINDOW_SIZE:]  # 최근 WINDOW_SIZE개의 대화만 포함
-        return "\n".join([
-            f"User: {msg['question']}\nBot: {msg['response']}"
-            for msg in important_messages
-        ])
+        context_key = f"context:{session_id}"
+        messages = self.client.lrange(context_key, -self.WINDOW_SIZE, -1)
+        return "\n".join([json.loads(msg)["question"] for msg in messages])
+    
+    def save_keywords(self, keywords: List[str]):
+        """
+        키워드 출현 빈도를 업데이트합니다.
+        :param keywords: 키워드 리스트
+        """
+        keyword_key = "keywords"
+        for keyword in keywords:
+            self.client.hincrby(keyword_key, keyword, 1)
+    
+    def log_insuffiecient_context_question(self, question: str, embedding: List[float]):
+        """
+        유사 질문이 부족한 경우 질문과 임베딩을 로그로 저장합니다.
+        hash 구조를 이용하여 질문과 임베딩을 저장합니다.
+        :param question: 질문
+        :param embedding: 질문의 임베딩
+        """
+        log_key = "insufficient_context_questions"
+        question_key = f"{question}"
+        self.client.hset(log_key, question_key, json.dumps(embedding))
