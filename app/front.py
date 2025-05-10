@@ -2,8 +2,8 @@ import streamlit as st
 import requests
 
 # Streamlit 앱 제목
-st.set_page_config(page_title="Real-time SSE Chatbot", layout="centered")
-st.title("💬 Real-time SSE Chatbot")
+st.set_page_config(page_title="Naver Store Chatbot", layout="centered")
+st.title("💬 Naver Store Chatbot")
 
 # SSE 응답을 처리하는 제너레이터
 def sse_stream(question: str):
