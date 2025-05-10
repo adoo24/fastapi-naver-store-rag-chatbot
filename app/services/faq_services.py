@@ -31,12 +31,13 @@ class FAQService:
         if embedding is None:
             raise ValueError("임베딩 생성에 실패했습니다.")
         related_questions = self.milvus_repo.find_similar_faqs(embedding)
-        faq_context = "\n\n".join([f"- {q['question']}" for q in related_questions])
-        
+        faq_context = "\n\n".join([f"- 질문: {q['question']}\n  답변: {q['answer']}" for q in related_questions])        
         if len(related_questions) <= 5:
             # 유사 질문이 부족함, 보강 필요한 질문 저장
             self.context_repo.log_insuffiecient_context_question(refined_question, embedding)
-        yield f"data: --- \n유사 질문 목록:\n{faq_context}\n\n --- \n\n"
+        for q in related_questions:
+            yield f"data: - 유사 질문: {q['question']}\n\n"
+        yield f"data: ---\n\n"
 
         # 3. 중요도 기반 맥락 생성
         

@@ -29,7 +29,7 @@ class OpenAIRepository:
             return question
         prompt = f"""
             아래는 사용자의 이전 대화 맥락입니다. 이 맥락을 바탕으로 사용자의 질문하고자 하는 의도와 궁금해 하는 것을 파악하고, 명확하고 간결하게 정제해주세요.
-            주어와 목적어를 명확히 하고, 불필요한 부분은 제거해주세요
+            질문이 마지막에 있을 수록 중요합니다. 질문의 주어와 목적어를 명확히 하고, 불필요한 부분은 제거해주세요.
         맥락:
         {session_context}
 
@@ -52,7 +52,7 @@ class OpenAIRepository:
         """
         OpenAI GPT 모델을 사용하여 SSE 방식으로 응답을 스트리밍합니다.
         :param refined_question: 정제된 질문
-        :param context: 질문에 대한 추가 맥락
+        :param context: 참고할 FAQ 컨텍스트
         """
         prompt = f"""
             너는 네이버 스마트스토어 관련 질문에 답변하는 스마트하고 친절한 상담원 역할을 맡고 있어.
@@ -81,7 +81,7 @@ class OpenAIRepository:
             또는 등록한 상품의 노출 방법도 안내드릴까요?  
 
             **현재 사용자 질문: {refined_question}**
-            **이전 질문들:**
+            **참고해야 할 스마트스토어 FAQ:**
             {context}
 
             **답변:**
