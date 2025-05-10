@@ -1,4 +1,4 @@
-from pymilvus import connections, Collection, utility
+from pymilvus import CollectionSchema, DataType, FieldSchema, connections, Collection, utility
 import json
 
 class MilvusRepository:
@@ -13,7 +13,7 @@ class MilvusRepository:
         """
         connections.connect("default", host="localhost", port="19530")
         if not utility.has_collection(self.collection_name):
-            raise ValueError(f"컬렉션 '{self.collection_name}'이 존재하지 않습니다.")
+            self.init_milvus()
         self.collection = Collection(self.collection_name)
         self.collection.load()
 
@@ -47,7 +47,7 @@ class MilvusRepository:
         return [
             {"question": hit.entity.get("question"), "answer": hit.entity.get("answer")}
             for hits in results
-            for hit in hits if hit.score > 0.55
+            for hit in hits if hit.score > 0.5
         ]
     def delete_all(self):
         """
@@ -65,3 +65,25 @@ class MilvusRepository:
 
         self.collection.insert([[cleaned_question], [cleaned_answer], [embedding]])
         print(f"✅ 질문과 응답 저장 완료: {cleaned_question} -> {cleaned_answer}")
+    def init_milvus(self):
+        connections.connect("default", host="localhost", port="19530")
+        collection_name = "faq_collection"
+        
+        # 새 컬렉션 생성
+        fields = [
+            FieldSchema(name="question", dtype=DataType.VARCHAR, max_length=500, is_primary=True),
+            FieldSchema(name="answer", dtype=DataType.VARCHAR, max_length=65535),  # 응답 필드 추가
+            FieldSchema(name="embedding", dtype=DataType.FLOAT_VECTOR, dim=1536)
+        ]
+        schema = CollectionSchema(fields=fields, description="FAQ Collection")
+        
+        collection = Collection(collection_name, schema=schema, using="default")
+        
+        # 인덱스 생성
+        if not collection.has_index():
+            index_params = {"index_type": "IVF_FLAT", "metric_type": "IP", "params": {"nlist": 128}}
+            collection.create_index(field_name="embedding", index_params=index_params)
+            print("✅ 인덱스 생성 완료")
+        
+        collection.load()
+        return collection
