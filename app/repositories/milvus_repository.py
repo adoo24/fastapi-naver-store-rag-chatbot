@@ -47,7 +47,7 @@ class MilvusRepository:
         return [
             {"question": hit.entity.get("question"), "answer": hit.entity.get("answer")}
             for hits in results
-            for hit in hits if hit.score > 0.5
+            for hit in hits if hit.score > 0.3
         ]
     def delete_all(self):
         """
